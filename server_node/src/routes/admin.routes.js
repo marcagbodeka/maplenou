@@ -1,6 +1,6 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
-const { getDbPool } = require('../config/db');
+const { getDbPool } = require('../config/db-mongo-wrapper');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();

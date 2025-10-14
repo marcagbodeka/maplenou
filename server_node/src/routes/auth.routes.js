@@ -1,7 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { getDbPool } = require('../config/db');
+const { getDbPool } = require('../config/db-mongo-wrapper');
 const { jwtSecret } = require('../config/env');
 const { authMiddleware } = require('../middleware/auth');
 

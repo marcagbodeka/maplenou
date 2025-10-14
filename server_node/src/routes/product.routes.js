@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/auth');
 const { requireRole } = require('../middlewares/role');
-const { getDbPool } = require('../config/db');
+const { getDbPool } = require('../config/db-mongo-wrapper');
 
 // GET /api/product - public
 router.get('/', async (req, res) => {

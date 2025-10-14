@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/auth');
 const { orderLimiter } = require('../middlewares/rateLimit');
-const { getDbPool } = require('../config/db');
+const { getDbPool } = require('../config/db-mongo-wrapper');
 
 // POST /api/orders - créer une commande pour aujourd'hui
 router.post('/', authMiddleware, orderLimiter, async (req, res) => {

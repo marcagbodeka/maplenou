@@ -1,0 +1,412 @@
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+.App {
+  text-align: center;
+  padding: 20px;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.desktop-blocker {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b74ff;
+  padding: 24px;
+}
+
+.desktop-blocker-card {
+  background: #fff;
+  color: #0b2c4a;
+  border-radius: 16px;
+  padding: 32px 28px;
+  width: 560px;
+  max-width: 92vw;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+}
+
+.desktop-blocker-card h1 {
+  margin: 8px 0 6px;
+  font-size: 32px;
+}
+
+.desktop-blocker-card p {
+  margin: 0 0 8px;
+  color: #245;
+}
+
+.brand-icon {
+  font-size: 64px;
+}
+
+/* Landing (mobile) - Design exact du HTML */
+:root {
+  --blue: #1187ff;
+  --blue-700: #0e73e6;
+  --white: #ffffff;
+  --muted: #9bbef9;
+  --border: #e6f0ff;
+  --radius-large: 34px;
+  --radius-panel: 48px;
+  --shadow: 0 10px 24px rgba(17,135,255,0.12);
+  --text-dark: #0b2a4a;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+/* Override Bootstrap pour notre design personnalisé */
+.btn-primary {
+  background: linear-gradient(180deg, var(--blue) 0%, var(--blue-700) 100%) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  border-radius: 999px !important;
+  padding: 14px 18px !important;
+  font-weight: 600 !important;
+  box-shadow: var(--shadow) !important;
+}
+
+.btn-outline-primary {
+  background: transparent !important;
+  color: var(--text-dark) !important;
+  border: 2px solid rgba(17,135,255,0.12) !important;
+  border-radius: 999px !important;
+  padding: 14px 18px !important;
+  font-weight: 600 !important;
+  box-shadow: none !important;
+}
+
+.form-control {
+  border-radius: 12px !important;
+  border: 2px solid rgba(17,135,255,0.12) !important;
+  padding: 12px 16px !important;
+  font-size: 16px !important;
+}
+
+.form-control:focus {
+  border-color: var(--blue) !important;
+  box-shadow: 0 0 0 0.2rem rgba(17,135,255,0.25) !important;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: linear-gradient(180deg, var(--blue) 0%, #0f7be8 100%);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-dark);
+}
+
+/* Wrap whole screen */
+.screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+/* content column centered horizontally */
+.hero {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 20px;
+  text-align: center;
+  min-height: 0;
+}
+
+/* logo area */
+.logo-plate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-direction: column;
+}
+
+/* circle background behind the croissant to mimic white icon on blue */
+.logo {
+  width: 120px;
+  height: 120px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 30px;
+  background: rgba(255,255,255,0.12);
+  /* subtle inner highlight */
+  box-shadow: inset 0 -6px 18px rgba(255,255,255,0.02);
+}
+
+/* SVG croissant is white - keep it simple and bold */
+.logo svg {
+  width: 80px;
+  height: 80px;
+  display: block;
+}
+
+h1 {
+  margin: 18px 0 6px;
+  color: var(--white);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+p.lead {
+  margin: 0;
+  color: rgba(255,255,255,0.9);
+  opacity: 0.95;
+  font-weight: 500;
+  font-size: 14px;
+}
+
+/* bottom panel (white rounded container) */
+.panel {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  transform: translateX(-50%);
+  width: calc(100% - 40px);
+  max-width: 400px;
+  background: var(--white);
+  border-radius: var(--radius-panel);
+  padding: 20px 28px 32px;
+  box-shadow: 0 10px 30px rgba(2,18,62,0.15);
+  border: 1px solid rgba(16,118,255,0.06);
+  flex-shrink: 0;
+}
+
+.controls {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: center;
+}
+
+.btn {
+  width: 100%;
+  max-width: 360px;
+  padding: 14px 18px;
+  border-radius: 999px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .18s ease;
+  box-shadow: var(--shadow);
+}
+
+/* primary filled */
+.btn.primary {
+  background: linear-gradient(180deg, var(--blue) 0%, var(--blue-700) 100%);
+  color: var(--white);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.btn.primary:active {
+  transform: translateY(1px);
+  box-shadow: 0 6px 18px rgba(17,135,255,0.10);
+}
+
+/* outline */
+.btn.ghost {
+  background: transparent;
+  color: var(--text-dark);
+  border: 2px solid rgba(17,135,255,0.12);
+  box-shadow: none;
+}
+
+.btn.ghost:active {
+  transform: translateY(1px);
+}
+
+/* small subtle hint above buttons to match screenshot spacing */
+.panel .hint {
+  width: 100%;
+  margin: 0 auto 12px;
+  color: #577ea8;
+  font-weight: 500;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* responsiveness */
+@media (max-width: 768px) {
+  .hero {
+    padding: 8px 16px;
+  }
+  
+  h1 {
+    font-size: 28px;
+  }
+  
+  .logo {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .logo svg {
+    width: 70px;
+    height: 70px;
+  }
+  
+  .panel {
+    width: calc(100% - 32px);
+    padding: 18px 20px 28px;
+    border-radius: 32px;
+    bottom: 15px;
+  }
+}
+
+@media (max-width: 420px) {
+  .hero {
+    padding: 6px 12px;
+  }
+  
+  h1 {
+    font-size: 26px;
+  }
+  
+  .logo {
+    width: 90px;
+    height: 90px;
+  }
+  
+  .logo svg {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .panel {
+    width: calc(100% - 24px);
+    padding: 16px 16px 24px;
+    border-radius: 24px;
+    bottom: 10px;
+  }
+}
+
+.auth-screen {
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.message {
+  background-color: #4CAF50;
+  color: white;
+  padding: 10px 20px;
+  margin: 20px;
+  border-radius: 5px;
+}
+
+.section {
+  margin: 30px 0;
+  padding: 20px;
+  background-color: #1e1e1e;
+  border-radius: 10px;
+  max-width: 800px;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+input, textarea {
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+button {
+  background-color: #61dafb;
+  color: #282c34;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  margin: 5px;
+}
+
+button:hover {
+  background-color: #21a1f1;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+th, td {
+  border: 1px solid #ddd;
+  padding: 12px;
+  text-align: left;
+}
+
+th {
+  background-color: #61dafb;
+  color: #282c34;
+}
+
+tr:nth-child(even) {
+  background-color: #333;
+}

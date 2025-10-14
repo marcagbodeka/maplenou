@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Maplénou — Écran d'accueil</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --blue:#1187ff;
+      --blue-700:#0e73e6;
+      --white:#ffffff;
+      --muted:#9bbef9;
+      --border:#e6f0ff;
+      --radius-large:34px;
+      --radius-panel:48px;
+      --shadow: 0 10px 24px rgba(17,135,255,0.12);
+      --text-dark:#0b2a4a;
+      font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+
+    *{box-sizing:border-box}
+    html,body{
+      height:100%;
+      margin:0;
+      background: linear-gradient(180deg, var(--blue) 0%, #0f7be8 100%);
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      color:var(--text-dark);
+    }
+
+    /* Wrap whole screen */
+    .screen{
+      min-height:100vh;
+      display:flex;
+      align-items:flex-start;
+      justify-content:center;
+      padding:36px 20px 28px;
+      position:relative;
+    }
+
+    /* content column centered horizontally */
+    .hero{
+      width:100%;
+      max-width:420px;
+      text-align:center;
+    }
+
+    /* logo area */
+    .logo-plate{
+      margin-top:28px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:16px;
+      flex-direction:column;
+    }
+
+    /* circle background behind the croissant to mimic white icon on blue */
+    .logo{
+      width:96px;
+      height:96px;
+      display:inline-grid;
+      place-items:center;
+      border-radius:24px;
+      background:rgba(255,255,255,0.12);
+      /* subtle inner highlight */
+      box-shadow: inset 0 -6px 18px rgba(255,255,255,0.02);
+    }
+
+    /* SVG croissant is white - keep it simple and bold */
+    .logo svg{
+      width:64px;
+      height:64px;
+      display:block;
+    }
+
+    h1{
+      margin:18px 0 6px;
+      color:var(--white);
+      font-size:30px;
+      font-weight:700;
+      letter-spacing:0.2px;
+    }
+
+    p.lead{
+      margin:0;
+      color:rgba(255,255,255,0.9);
+      opacity:0.95;
+      font-weight:500;
+      font-size:14px;
+    }
+
+    /* bottom panel (white rounded container) */
+    .panel{
+      position:absolute;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:0;
+      width:100%;
+      max-width:420px;
+      background:var(--white);
+      border-top-left-radius:var(--radius-panel);
+      border-top-right-radius:var(--radius-panel);
+      padding:28px 28px 44px;
+      box-shadow: 0 -10px 30px rgba(2,18,62,0.06);
+      border: 1px solid rgba(16,118,255,0.06);
+    }
+
+    .controls{
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      align-items:center;
+    }
+
+    .btn{
+      width:100%;
+      max-width:360px;
+      padding:14px 18px;
+      border-radius:999px;
+      font-size:16px;
+      font-weight:600;
+      cursor:pointer;
+      border:none;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      transition:all .18s ease;
+      box-shadow: var(--shadow);
+    }
+
+    /* primary filled */
+    .btn.primary{
+      background: linear-gradient(180deg, var(--blue) 0%, var(--blue-700) 100%);
+      color:var(--white);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .btn.primary:active{ transform:translateY(1px); box-shadow: 0 6px 18px rgba(17,135,255,0.10) }
+
+    /* outline */
+    .btn.ghost{
+      background:transparent;
+      color:var(--text-dark);
+      border:2px solid rgba(17,135,255,0.12);
+      box-shadow:none;
+    }
+    .btn.ghost:active{ transform:translateY(1px); }
+
+    /* small subtle hint above buttons to match screenshot spacing */
+    .panel .hint{
+      width:100%;
+      max-width:360px;
+      margin:0 auto 12px;
+      color:#577ea8;
+      font-weight:500;
+      font-size:14px;
+      text-align:center;
+    }
+
+    /* responsiveness */
+    @media (max-width:420px){
+      h1{ font-size:26px }
+      .logo{ width:84px; height:84px }
+      .logo svg{ width:56px; height:56px }
+      .panel{ padding-left:22px; padding-right:22px; border-top-left-radius:32px; border-top-right-radius:32px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="screen">
+    <div class="hero" aria-hidden="false">
+      <div class="logo-plate">
+        <div class="logo" role="img" aria-label="Logo Maplénou - croissant">
+          <!-- Croissant SVG (stylized) -->
+          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+            <defs>
+              <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+                <stop offset="0" stop-color="#fff" stop-opacity="1"/>
+                <stop offset="1" stop-color="#fff" stop-opacity="1"/>
+              </linearGradient>
+            </defs>
+            <!-- A friendly stylized croissant made of two arcs and some detail -->
+            <path d="M8 34c1.6-6.8 10.5-19.8 28-18 11 1.2 18.8 9 23 18 0 0-7.6-7.2-18-8-6.8-.6-17 2.6-25 8z" fill="url(#g)"/>
+            <path d="M12 38c3-4 12-12 28-10 8 1.1 17 6.3 22 10-4-3-10-6-18-6-12 0-22 5-32 6z" fill="rgba(255,255,255,0.9)"/>
+            <path d="M16 28c5 0 10-4 18-6" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+
+        <h1>Maplénou</h1>
+        <p class="lead">Commandez, savourez, recommencez</p>
+      </div>
+    </div>
+
+    <div class="panel" role="region" aria-label="Actions">
+      <div class="controls" >
+        <div class="hint">Bienvenue — commencez ici</div>
+
+        <button class="btn primary" aria-label="Se connecter">Se connecter</button>
+
+        <button class="btn ghost" aria-label="S'inscrire">S'inscrire</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

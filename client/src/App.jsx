@@ -14,8 +14,8 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Use same-origin calls via Vite proxy in dev
-  const API_URL = '/api';
+  // Use production API URL or fallback to proxy in dev
+  const API_URL = import.meta.env.VITE_API_URL || '/api';
 
   // Vérifier la session au chargement de l'app
   useEffect(() => {

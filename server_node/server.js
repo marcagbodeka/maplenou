@@ -1,13 +1,16 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-const { port, corsOrigin, db: dbCfg } = require('./src/config/env');
-const { getDbPool } = require('./src/config/db');
+const { port, corsOrigin } = require('./src/config/env');
+const { connectDB } = require('./src/config/mongodb');
 const { scheduleDailyReset } = require('./src/jobs/dailyReset');
 const { initializeProduction } = require('./scripts/init-production');
 
 const app = express();
 const PORT = port;
+
+// Connexion à MongoDB
+connectDB().catch(console.error);
 
 // Initialisation automatique en production
 if (process.env.NODE_ENV === 'production') {
@@ -54,9 +57,10 @@ app.use('/api/admin', require('./src/routes/admin.routes'));
 // Health check (DB connectivity)
 app.get('/api/health', async (req, res) => {
   try {
-    const pool = getDbPool();
-    const [rows] = await pool.query('SELECT 1 AS ok');
-    return res.json({ ok: true, db: rows?.[0]?.ok === 1 });
+    const { getDb } = require('./src/config/mongodb');
+    const db = getDb();
+    await db.admin().ping();
+    return res.json({ ok: true, db: 'connected' });
   } catch (err) {
     return res.status(500).json({ ok: false, error: String(err?.message || err) });
   }

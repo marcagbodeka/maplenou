@@ -25,6 +25,20 @@ router.post('/register', async (req, res) => {
         return res.status(409).json({ success: false, message: 'Ce numéro de téléphone est déjà utilisé' });
       }
     }
+    // Normaliser institut/parcours si inversés
+    const knownParcours = new Set(['Licence 1', 'Licence 2', 'Licence 3', 'Master 1', 'Master 2', 'Doctorat']);
+    const knownInstituts = new Set(['ISSJ', 'ISEG', 'ESI/DGI', 'HEC', 'IAEC']);
+    let normInstitut = institut || null;
+    let normParcours = parcours || null;
+    if (!normParcours && knownParcours.has(String(normInstitut))) {
+      normParcours = normInstitut;
+      normInstitut = null;
+    }
+    if (!normInstitut && knownInstituts.has(String(normParcours))) {
+      normInstitut = normParcours;
+      normParcours = null;
+    }
+
     const hash = await bcrypt.hash(password, 10);
     await usersCol.insertOne({
       nom,
@@ -33,8 +47,8 @@ router.post('/register', async (req, res) => {
       hash_mot_de_passe: hash,
       role: 'client',
       whatsapp: phone,
-      institut: institut || null,
-      parcours: parcours || null,
+      institut: normInstitut,
+      parcours: normParcours,
       streak_consecutif: 0,
       badge_niveau: 0,
       eligible_loterie: false,

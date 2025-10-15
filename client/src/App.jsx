@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { api } from './api';
 import './App.css';
 import WelcomeScreen from './pages/WelcomeScreen.jsx';
 import LoginScreen from './pages/LoginScreen.jsx';
@@ -14,8 +14,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
 
-  // Use production API URL or fallback to proxy in dev
-  const API_URL = import.meta.env.VITE_API_URL || '/api';
+  // API client is preconfigured with baseURL
 
   // Vérifier la session au chargement de l'app
   useEffect(() => {
@@ -91,7 +90,7 @@ function App() {
   const handleLogin = async (loginData) => {
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/auth/login`, loginData);
+      const response = await api.post(`/auth/login`, loginData);
       if (response.data.success) {
         const token = response.data.token;
         const backendRole = response.data.role;
@@ -134,7 +133,7 @@ function App() {
   const handleRegister = async (registerData) => {
     setLoading(true);
     try {
-      const response = await axios.post(`${API_URL}/auth/register`, registerData);
+      const response = await api.post(`/auth/register`, registerData);
       if (response.data.success) {
         // Simuler les données utilisateur (le backend ne retourne que le message de succès)
         const userData = {

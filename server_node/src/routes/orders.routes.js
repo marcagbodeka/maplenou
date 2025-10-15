@@ -100,7 +100,14 @@ router.get('/stock-remaining', authMiddleware, async (req, res) => {
     }
 
     const dateStr = new Date().toISOString().split('T')[0];
-    const alloc = await allocCol.findOne({ vendeur_id: vendor._id, date_jour: dateStr });
+    // Support legacy documents where vendeur_id may be stored as a string
+    const alloc = await allocCol.findOne({
+      date_jour: dateStr,
+      $or: [
+        { vendeur_id: vendor._id },
+        { vendeur_id: vendor._id.toString() }
+      ]
+    });
     return res.json({ success: true, scope: 'vendor', stock: alloc?.stock_restant ?? 0 });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Erreur lecture stock', detail: String(err) });

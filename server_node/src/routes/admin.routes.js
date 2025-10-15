@@ -1,6 +1,8 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const { getDbPool } = require('../config/db-mongo-wrapper');
+const { getCollection } = require('../config/mongodb');
+const { ObjectId } = require('mongodb');
 const { authMiddleware } = require('../middleware/auth');
 
 const router = express.Router();
@@ -151,15 +153,19 @@ router.post('/allocate', authMiddleware, adminMiddleware, async (req, res) => {
 // GET /api/admin/revenue/:date - Chiffre d'affaires pour une date donnée
 router.get('/revenue/:date', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { date } = req.params;
-    const pool = getDbPool();
-    
-    const [[{ revenue }]] = await pool.query(
-      'SELECT COALESCE(SUM(prix_total), 0) as revenue FROM commandes WHERE statut = "traitee" AND DATE(date_commande) = ?',
-      [date]
-    );
-    
-    res.json({ success: true, revenue: revenue || 0 });
+    const { date } = req.params; // format YYYY-MM-DD
+    const commandes = getCollection('commandes');
+
+    const start = new Date(date + 'T00:00:00.000Z');
+    const end = new Date(new Date(start).getTime() + 24 * 60 * 60 * 1000);
+
+    const agg = await commandes.aggregate([
+      { $match: { statut: 'traitee', date_commande: { $gte: start, $lt: end } } },
+      { $group: { _id: null, revenue: { $sum: { $ifNull: ['$prix_total', 0] } } } }
+    ]).toArray();
+
+    const revenue = agg[0]?.revenue || 0;
+    res.json({ success: true, revenue });
   } catch (err) {
     console.error('Erreur récupération chiffre d\'affaires:', err);
     res.status(500).json({ success: false, message: 'Erreur serveur', detail: String(err) });
@@ -169,26 +175,26 @@ router.get('/revenue/:date', authMiddleware, adminMiddleware, async (req, res) =
 // GET /api/admin/product-stats/:date - Statistiques produit du jour
 router.get('/product-stats/:date', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { date } = req.params;
-    const pool = getDbPool();
-    
-    // Commandes acceptées pour cette date
-    const [[{ acceptedOrders }]] = await pool.query(
-      'SELECT COUNT(*) as acceptedOrders FROM commandes WHERE statut = "traitee" AND DATE(date_commande) = ?',
-      [date]
-    );
-    
-    // Total des allocations pour cette date
-    const [[{ totalAllocations }]] = await pool.query(
-      'SELECT COALESCE(SUM(stock_alloue), 0) as totalAllocations FROM allocations_vendeurs WHERE date_jour = ?',
-      [date]
-    );
-    
-    res.json({ 
-      success: true, 
-      acceptedOrders: acceptedOrders || 0,
-      totalAllocations: totalAllocations || 0
-    });
+    const { date } = req.params; // YYYY-MM-DD
+    const commandes = getCollection('commandes');
+    const allocations = getCollection('allocations_vendeurs');
+
+    const start = new Date(date + 'T00:00:00.000Z');
+    const end = new Date(new Date(start).getTime() + 24 * 60 * 60 * 1000);
+
+    const acceptedAgg = await commandes.aggregate([
+      { $match: { statut: 'traitee', date_commande: { $gte: start, $lt: end } } },
+      { $count: 'acceptedOrders' }
+    ]).toArray();
+    const acceptedOrders = acceptedAgg[0]?.acceptedOrders || 0;
+
+    const totalAllocAgg = await allocations.aggregate([
+      { $match: { date_jour: date } },
+      { $group: { _id: null, total: { $sum: { $ifNull: ['$stock_alloue', 0] } } } }
+    ]).toArray();
+    const totalAllocations = totalAllocAgg[0]?.total || 0;
+
+    res.json({ success: true, acceptedOrders, totalAllocations });
   } catch (err) {
     console.error('Erreur récupération stats produit:', err);
     res.status(500).json({ success: false, message: 'Erreur serveur', detail: String(err) });
@@ -198,47 +204,51 @@ router.get('/product-stats/:date', authMiddleware, adminMiddleware, async (req, 
 // GET /api/admin/vendors-stats/:date - Liste des vendeurs avec leurs stats
 router.get('/vendors-stats/:date', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const { date } = req.params;
-    const pool = getDbPool();
-    
-    const [vendors] = await pool.query(`
-      SELECT 
-        u.id,
-        u.nom,
-        u.prenom,
-        u.institut,
-        u.parcours,
-        COALESCE(latest_allocation.stock_alloue, 0) as stock_alloue,
-        COALESCE(latest_allocation.stock_restant, 0) as stock_restant,
-        COALESCE(order_stats.accepted_orders, 0) as accepted_orders
-      FROM utilisateurs u
-      LEFT JOIN (
-        SELECT 
-          av1.vendeur_id,
-          av1.stock_alloue,
-          av1.stock_restant
-        FROM allocations_vendeurs av1
-        WHERE av1.date_jour = ?
-        AND av1.id = (
-          SELECT MAX(av2.id) 
-          FROM allocations_vendeurs av2 
-          WHERE av2.vendeur_id = av1.vendeur_id 
-          AND av2.date_jour = ?
-        )
-      ) latest_allocation ON u.id = latest_allocation.vendeur_id
-      LEFT JOIN (
-        SELECT 
-          vendeur_id,
-          COUNT(*) as accepted_orders
-        FROM commandes 
-        WHERE statut = "traitee" AND DATE(date_commande) = ?
-        GROUP BY vendeur_id
-      ) order_stats ON u.id = order_stats.vendeur_id
-      WHERE u.role = 'vendeur'
-      ORDER BY u.nom, u.prenom
-    `, [date, date, date]);
-    
-    res.json({ success: true, vendors });
+    const { date } = req.params; // YYYY-MM-DD
+    const usersCol = getCollection('utilisateurs');
+    const allocCol = getCollection('allocations_vendeurs');
+    const commandesCol = getCollection('commandes');
+
+    const start = new Date(date + 'T00:00:00.000Z');
+    const end = new Date(new Date(start).getTime() + 24 * 60 * 60 * 1000);
+
+    const vendors = await usersCol.find({ role: 'vendeur' }).project({ hash_mot_de_passe: 0 }).toArray();
+
+    const allocations = await allocCol.find({ date_jour: date }).sort({ _id: -1 }).toArray();
+    const latestAllocByVendor = {};
+    for (const a of allocations) {
+      const key = (a.vendeur_id && a.vendeur_id.toString()) || '';
+      if (!latestAllocByVendor[key]) {
+        latestAllocByVendor[key] = a;
+      }
+    }
+
+    const ordersAgg = await commandesCol.aggregate([
+      { $match: { statut: 'traitee', date_commande: { $gte: start, $lt: end } } },
+      { $group: { _id: '$vendeur_id', count: { $sum: 1 } } }
+    ]).toArray();
+    const acceptedByVendor = {};
+    for (const o of ordersAgg) {
+      const key = o._id ? o._id.toString() : '';
+      acceptedByVendor[key] = o.count;
+    }
+
+    const result = vendors.map(v => {
+      const idStr = v._id.toString();
+      const alloc = latestAllocByVendor[idStr];
+      return {
+        id: idStr,
+        nom: v.nom,
+        prenom: v.prenom,
+        institut: v.institut,
+        parcours: v.parcours,
+        stock_alloue: alloc?.stock_alloue || 0,
+        stock_restant: alloc?.stock_restant || 0,
+        accepted_orders: acceptedByVendor[idStr] || 0,
+      };
+    });
+
+    res.json({ success: true, vendors: result });
   } catch (err) {
     console.error('Erreur récupération stats vendeurs:', err);
     res.status(500).json({ success: false, message: 'Erreur serveur', detail: String(err) });

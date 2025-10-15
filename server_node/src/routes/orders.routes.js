@@ -107,7 +107,14 @@ router.get('/stock-remaining', authMiddleware, async (req, res) => {
     const usersCol = getCollection('utilisateurs');
     const allocCol = getCollection('allocations_vendeurs');
 
-    const user = await usersCol.findOne({ _id: new ObjectId(String(userId)) });
+    let user = null;
+    const userIdStr = String(userId || '');
+    if (ObjectId.isValid(userIdStr)) {
+      user = await usersCol.findOne({ _id: new ObjectId(userIdStr) });
+    }
+    if (!user) {
+      return res.json({ success: true, scope: 'vendor', stock: 0, message: 'Utilisateur introuvable' });
+    }
     const institut = user?.institut;
     const parcours = user?.parcours;
 

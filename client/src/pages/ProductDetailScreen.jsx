@@ -11,6 +11,7 @@ export default function ProductDetailScreen({ user, onLogout }) {
   const [hasPendingOrder, setHasPendingOrder] = useState(false);
   const [pendingOrder, setPendingOrder] = useState(null);
   const [isOrdering, setIsOrdering] = useState(false);
+  const [displayUser, setDisplayUser] = useState({ prenom: user?.prenom, nom: user?.nom });
   
   // Données de progression réelles
   const [orderStats, setOrderStats] = useState({
@@ -110,6 +111,7 @@ export default function ProductDetailScreen({ user, onLogout }) {
               maxOrders: 120
             };
             console.log('Données utilisateur mises à jour:', userData);
+            setDisplayUser({ prenom: userData.prenom, nom: userData.nom });
           }
         } catch (error) {
           console.error('Erreur lors du chargement des données utilisateur:', error);
@@ -165,6 +167,7 @@ export default function ProductDetailScreen({ user, onLogout }) {
           if (userResponse.data.success) {
             // Mettre à jour les stats avec les nouvelles données
             const newStreak = userResponse.data.user.streak_consecutif || 0;
+            setDisplayUser({ prenom: userResponse.data.user.prenom, nom: userResponse.data.user.nom });
             setOrderStats(prev => {
               const updatedBadges = prev.badges.map(badge => ({
                 ...badge,
@@ -312,7 +315,7 @@ export default function ProductDetailScreen({ user, onLogout }) {
         <div className="fw-bold mb-1" style={{ fontSize: "1.1rem" }}>Bienvenue</div>
         <div className="d-flex align-items-center justify-content-center">
           <PersonCircle className="me-2" size={20} />
-          <span style={{ fontSize: "1rem" }}>{user?.prenom} {user?.nom}</span>
+          <span style={{ fontSize: "1rem" }}>{displayUser?.prenom} {displayUser?.nom}</span>
         </div>
       </div>
 

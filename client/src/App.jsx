@@ -143,20 +143,36 @@ function App() {
         parcours: registerData.parcours,
       });
       if (response.data.success) {
-        // Simuler les données utilisateur (le backend ne retourne que le message de succès)
-        const userData = {
-          id: 1,
-          nom: registerData.nom,
-          prenom: registerData.prenom,
+        // Se connecter automatiquement pour récupérer un token et les vraies infos
+        const loginRes = await api.post(`/auth/login`, {
           email: registerData.email,
-          institut: registerData.institut,
-          parcours: registerData.parcours
-        };
-        
-        setUser(userData);
-        saveSession(userData); // Sauvegarder la session
-        setView('product');
-        setMessage('Inscription réussie !');
+          password: registerData.password,
+        });
+        if (loginRes.data?.success && loginRes.data?.token) {
+          const token = loginRes.data.token;
+          // Récupérer /auth/me pour avoir nom/prenom/institut/parcours/streak
+          const meRes = await api.get(`/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const me = meRes.data?.user || {};
+          const userData = {
+            id: me.id,
+            nom: me.nom,
+            prenom: me.prenom,
+            email: me.email || registerData.email,
+            role: me.role || 'client',
+            institut: me.institut || registerData.institut,
+            parcours: me.parcours || registerData.parcours,
+            token,
+          };
+          setUser(userData);
+          saveSession(userData);
+          setView('product');
+          setMessage('Inscription réussie !');
+        } else {
+          setMessage("Inscription réussie, mais la connexion automatique a échoué. Veuillez vous connecter.");
+          setView('login');
+        }
       } else {
         setMessage('Erreur lors de l\'inscription');
       }

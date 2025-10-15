@@ -1,116 +1,84 @@
 const cron = require('node-cron');
-const { getDbPool } = require('../config/db');
+const { getCollection } = require('../config/mongodb');
+const { ObjectId } = require('mongodb');
 const { logger } = require('../utils/logger');
 
 async function runDailyReset() {
-  const pool = getDbPool();
-  const conn = await pool.getConnection();
   try {
-    await conn.beginTransaction();
+    const produit = getCollection('produit_unique');
+    const reservations = getCollection('reservations');
+    const usersCol = getCollection('utilisateurs');
+    const commandes = getCollection('commandes');
+    const allocations = getCollection('allocations_vendeurs');
 
-    // Reset du stock quotidien au stock total défini
-    await conn.query(
-      'UPDATE produit_unique SET stock_restant_du_jour = stock_total_du_jour, updated_at = CURRENT_TIMESTAMP'
-    );
+    // 1) Reset du stock global au stock total
+    await produit.updateMany({}, [{ $set: { stock_restant_du_jour: { $ifNull: ['$stock_total_du_jour', 0] }, updated_at: new Date() } }]);
 
-    // Expirer les réservations passées
-    await conn.query(
-      "UPDATE reservations SET statut = 'expiree' WHERE statut = 'active' AND date_cible < CURRENT_DATE()"
-    );
+    // 2) Expirer les réservations passées (si la collection existe)
+    try {
+      await reservations.updateMany({ statut: 'active', date_cible: { $lt: new Date() } }, { $set: { statut: 'expiree' } });
+    } catch (_) {}
 
-    // Reset des streaks des utilisateurs qui n'ont pas commandé hier
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+    // 3) Reset des streaks en fonction des allocations d'hier
+    const today = new Date(); today.setUTCHours(0,0,0,0);
+    const yesterday = new Date(today.getTime() - 24*60*60*1000);
     const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-    // Trouver les utilisateurs qui avaient un streak > 0 mais n'ont pas commandé hier
-    const [usersToReset] = await conn.query(`
-      SELECT u.id, u.nom, u.prenom, u.streak_consecutif 
-      FROM utilisateurs u 
-      WHERE u.role = 'client' 
-      AND u.streak_consecutif > 0 
-      AND (
-        u.dernier_achat_date IS NULL 
-        OR u.dernier_achat_date < ?
-        OR u.dernier_achat_date != ?
-      )
-    `, [yesterdayStr, yesterdayStr]);
+    // Précharger allocations d'hier par vendeur
+    const allocs = await allocations.find({ date_jour: yesterdayStr }).toArray();
+    const hadAllocVendor = new Set(allocs.map(a => (a.vendeur_id && a.vendeur_id.toString()) || ''));
 
-    // Reset leur streak à 0
-    if (usersToReset.length > 0) {
-      await conn.query(`
-        UPDATE utilisateurs 
-        SET streak_consecutif = 0, badge_niveau = 0, eligible_loterie = false
-        WHERE id IN (${usersToReset.map(u => u.id).join(',')})
-      `);
+    // Parcourir les clients avec streak > 0
+    const cursor = usersCol.find({ role: 'client', streak_consecutif: { $gt: 0 } });
+    const knownParcours = new Set(['Licence 1', 'Licence 2', 'Licence 3', 'Master 1', 'Master 2', 'Doctorat']);
+    const knownInstituts = new Set(['ISSJ', 'ISEG', 'ESI/DGI', 'HEC', 'IAEC']);
 
-      logger.info(`Reset streaks for ${usersToReset.length} users who missed yesterday:`, 
-        usersToReset.map(u => `${u.nom} ${u.prenom} (was ${u.streak_consecutif})`));
+    while (await cursor.hasNext()) {
+      const u = await cursor.next();
+      let institut = u.institut || null;
+      let parcours = u.parcours || null;
+      // Correction éventuelle
+      if (!parcours && knownParcours.has(String(institut))) { parcours = institut; institut = null; }
+      if (!institut && knownInstituts.has(String(parcours))) { institut = parcours; parcours = null; }
+
+      if (!institut) continue; // pas de vendeur cible → ne pas réinitialiser
+
+      // Trouver vendeur correspondant
+      let vendeur = null;
+      if (parcours) vendeur = await usersCol.findOne({ role: 'vendeur', institut, parcours });
+      if (!vendeur) vendeur = await usersCol.findOne({ role: 'vendeur', institut });
+      if (!vendeur) continue; // pas de vendeur → ne pas réinitialiser
+
+      const vendeurIdStr = vendeur._id.toString();
+      if (!hadAllocVendor.has(vendeurIdStr)) continue; // pas d'allocation hier → ne pas réinitialiser
+
+      // Vérifier commande acceptée hier
+      const hadOrder = await commandes.findOne({
+        utilisateur_id: u._id,
+        statut: 'traitee',
+        date_commande: { $gte: yesterday, $lt: today },
+      });
+      if (hadOrder) continue; // a commandé hier → conserver
+
+      // Reset streak
+      await usersCol.updateOne({ _id: u._id }, { $set: { streak_consecutif: 0, badge_niveau: 0, eligible_loterie: false } });
     }
 
-    await conn.commit();
-    logger.info('Daily reset executed');
+    logger.info('Daily reset executed (Mongo)');
   } catch (err) {
-    await conn.rollback();
-    logger.error('Daily reset failed', err);
-  } finally {
-    conn.release();
+    logger.error('Daily reset failed (Mongo)', err);
   }
 }
 
 function scheduleDailyReset() {
-  // Tous les jours à minuit
+  // Tous les jours à minuit UTC
   cron.schedule('0 0 * * *', runDailyReset);
 }
 
 // Fonction pour tester le reset des streaks
 async function resetStreaksForTesting() {
-  const pool = getDbPool();
-  const conn = await pool.getConnection();
-  try {
-    await conn.beginTransaction();
-
-    // Reset des streaks des utilisateurs qui n'ont pas commandé hier
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
-
-    // Trouver les utilisateurs qui avaient un streak > 0 mais n'ont pas commandé hier
-    const [usersToReset] = await conn.query(`
-      SELECT u.id, u.nom, u.prenom, u.streak_consecutif 
-      FROM utilisateurs u 
-      WHERE u.role = 'client' 
-      AND u.streak_consecutif > 0 
-      AND (
-        u.dernier_achat_date IS NULL 
-        OR u.dernier_achat_date < ?
-        OR u.dernier_achat_date != ?
-      )
-    `, [yesterdayStr, yesterdayStr]);
-
-    // Reset leur streak à 0
-    if (usersToReset.length > 0) {
-      await conn.query(`
-        UPDATE utilisateurs 
-        SET streak_consecutif = 0, badge_niveau = 0, eligible_loterie = false
-        WHERE id IN (${usersToReset.map(u => u.id).join(',')})
-      `);
-
-      console.log(`Reset streaks for ${usersToReset.length} users who missed yesterday:`, 
-        usersToReset.map(u => `${u.nom} ${u.prenom} (was ${u.streak_consecutif})`));
-    } else {
-      console.log('No users to reset - all users maintained their streak');
-    }
-
-    await conn.commit();
-    return usersToReset;
-  } catch (err) {
-    await conn.rollback();
-    console.error('Streak reset failed', err);
-    throw err;
-  } finally {
-    conn.release();
-  }
+  await runDailyReset();
+  return [];
 }
 
 module.exports = { scheduleDailyReset, runDailyReset, resetStreaksForTesting };

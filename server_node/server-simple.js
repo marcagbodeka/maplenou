@@ -29,6 +29,16 @@ app.use(cors({
 
 app.use(express.json());
 
+// Ensure DB connection per request (handles cold starts)
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    return res.status(500).json({ ok: false, error: 'Database not connected', detail: String(err?.message || err) });
+  }
+});
+
 // Routes API
 app.use('/api/auth', require('./src/routes/auth.routes'));
 app.use('/api/product', require('./src/routes/product.routes'));

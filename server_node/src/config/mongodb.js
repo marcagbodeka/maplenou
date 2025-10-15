@@ -4,17 +4,31 @@ let client = null;
 let db = null;
 
 const connectDB = async () => {
-  if (client) return client;
-  
+  // If already connected and DB set, return
+  if (client && db) return client;
+
   try {
     const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/maplenou';
-    client = new MongoClient(uri);
-    await client.connect();
-    db = client.db('maplenou');
+    if (!client) {
+      client = new MongoClient(uri);
+    }
+    if (!client.topology || !client.topology.isConnected()) {
+      await client.connect();
+    }
+    // Prefer explicit DB name from URI; fallback to 'maplenou'
+    const dbNameFromUri = (() => {
+      try {
+        const afterNet = uri.split('.mongodb.net/')[1] || uri.split('localhost:27017/')[1] || '';
+        return afterNet.split('?')[0] || 'maplenou';
+      } catch { return 'maplenou'; }
+    })();
+    db = client.db(dbNameFromUri || 'maplenou');
     console.log('✅ Connected to MongoDB');
     return client;
   } catch (error) {
     console.error('❌ MongoDB connection error:', error);
+    client = null;
+    db = null;
     throw error;
   }
 };

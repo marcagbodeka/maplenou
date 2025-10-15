@@ -39,7 +39,14 @@ app.use('/api/admin', require('./src/routes/admin.routes'));
 app.get('/api/health', async (req, res) => {
   try {
     const { getDb } = require('./src/config/mongodb');
-    const db = getDb();
+    let db;
+    try {
+      db = getDb();
+    } catch (e) {
+      // Attempt to connect on-demand if not connected yet
+      await connectDB();
+      db = require('./src/config/mongodb').getDb();
+    }
     await db.admin().ping();
     return res.json({ ok: true, db: 'connected' });
   } catch (err) {

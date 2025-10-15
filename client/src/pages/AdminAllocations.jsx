@@ -149,14 +149,14 @@ function Allocations({ admin, onBack, onLogout }) {
     try {
       setLoading(true);
       const response = await api.post('/admin/allocate', {
-        vendeur_id: parseInt(selectedVendeur),
+        vendeur_id: selectedVendeur,
         quantite: parseInt(quantite)
       }, {
         headers: { Authorization: `Bearer ${admin.token}` }
       });
 
       if (response.data.success) {
-        const vendeur = vendeurs.find(v => v.id === parseInt(selectedVendeur));
+        const vendeur = vendeurs.find(v => v.id === selectedVendeur);
         setMessage(`✅ ${quantite} croissants attribués à ${vendeur.nom} ${vendeur.prenom} (${vendeur.institut} - ${vendeur.parcours}).`);
         setQuantite("");
         setSelectedVendeur("");

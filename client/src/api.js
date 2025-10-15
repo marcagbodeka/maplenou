@@ -8,4 +8,20 @@ const baseURL = root
 
 export const api = axios.create({ baseURL });
 
+// Attach JWT from localStorage automatically if present
+api.interceptors.request.use((config) => {
+  try {
+    const stored = localStorage.getItem('maplenou_user');
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      const token = parsed?.token;
+      if (token && !config.headers?.Authorization) {
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+  } catch {}
+  return config;
+});
+
 

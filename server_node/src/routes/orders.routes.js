@@ -79,8 +79,20 @@ router.get('/stock-remaining', authMiddleware, async (req, res) => {
     if (!user) {
       return res.json({ success: true, scope: 'vendor', stock: 0, message: 'Utilisateur introuvable' });
     }
-    const institut = user?.institut;
-    const parcours = user?.parcours;
+    let institut = user?.institut;
+    let parcours = user?.parcours;
+
+    // Corriger d'anciens enregistrements où institut/parcours ont été inversés
+    const knownParcours = new Set(['Licence 1', 'Licence 2', 'Licence 3', 'Master 1', 'Master 2', 'Doctorat']);
+    const knownInstituts = new Set(['ISSJ', 'ISEG', 'ESI/DGI', 'HEC', 'IAEC']);
+    if (!parcours && knownParcours.has(String(institut))) {
+      parcours = institut;
+      institut = null;
+    }
+    if (!institut && knownInstituts.has(String(parcours))) {
+      institut = parcours;
+      parcours = null;
+    }
 
     if (!institut) {
       // Pas d'institut → pas de vendeur ciblé

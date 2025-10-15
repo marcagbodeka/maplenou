@@ -133,7 +133,15 @@ function App() {
   const handleRegister = async (registerData) => {
     setLoading(true);
     try {
-      const response = await api.post(`/auth/register`, registerData);
+      const response = await api.post(`/auth/register`, {
+        nom: registerData.nom,
+        prenom: registerData.prenom,
+        email: registerData.email,
+        password: registerData.password,
+        whatsapp: registerData.telephone,
+        institut: registerData.institut,
+        parcours: registerData.parcours,
+      });
       if (response.data.success) {
         // Simuler les données utilisateur (le backend ne retourne que le message de succès)
         const userData = {

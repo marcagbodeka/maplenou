@@ -9,18 +9,19 @@ const { authMiddleware } = require('../middlewares/auth');
 const router = express.Router();
 
 router.post('/register', async (req, res) => {
-  const { nom, prenom, email, password, whatsapp, institut, parcours } = req.body || {};
+  const { nom, prenom, email, password, whatsapp, telephone, institut, parcours } = req.body || {};
   if (!nom || !prenom || !email || !password) {
     return res.status(400).json({ success: false, message: 'Champs requis: nom, prenom, email, password' });
   }
   try {
     const usersCol = getCollection('utilisateurs');
-    const existing = await usersCol.findOne({ $or: [ { email }, ...(whatsapp ? [{ whatsapp }] : []) ] });
+    const phone = whatsapp || telephone || null;
+    const existing = await usersCol.findOne({ $or: [ { email }, ...(phone ? [{ whatsapp: phone }] : []) ] });
     if (existing) {
       if (existing.email === email) {
         return res.status(409).json({ success: false, message: 'Cette adresse email est déjà utilisée' });
       }
-      if (whatsapp && existing.whatsapp === whatsapp) {
+      if (phone && existing.whatsapp === phone) {
         return res.status(409).json({ success: false, message: 'Ce numéro de téléphone est déjà utilisé' });
       }
     }
@@ -31,7 +32,7 @@ router.post('/register', async (req, res) => {
       email,
       hash_mot_de_passe: hash,
       role: 'client',
-      whatsapp: whatsapp || null,
+      whatsapp: phone,
       institut: institut || null,
       parcours: parcours || null,
       streak_consecutif: 0,

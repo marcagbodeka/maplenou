@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { authMiddleware } = require('../middlewares/auth');
 const { orderLimiter } = require('../middlewares/rateLimit');
-const { getDbPool } = require('../config/db-mongo-wrapper');
+const { getCollection } = require('../config/mongodb');
+const { ObjectId } = require('mongodb');
 
 // POST /api/orders - créer une commande pour aujourd'hui
 router.post('/', authMiddleware, orderLimiter, async (req, res) => {
@@ -103,42 +104,32 @@ router.post('/', authMiddleware, orderLimiter, async (req, res) => {
 router.get('/stock-remaining', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.id;
-    const pool = getDbPool();
+    const usersCol = getCollection('utilisateurs');
+    const allocCol = getCollection('allocations_vendeurs');
 
-    const [[{ institut, parcours } = {}]] = await pool.query('SELECT institut, parcours FROM utilisateurs WHERE id = ?', [userId]);
+    const user = await usersCol.findOne({ _id: new ObjectId(String(userId)) });
+    const institut = user?.institut;
+    const parcours = user?.parcours;
+
     if (!institut) {
-      // Si pas d'institut défini, retourner le stock global du produit
-      const [[prod]] = await pool.query('SELECT stock_restant_du_jour FROM produit_unique WHERE id = 1');
-      return res.json({ success: true, scope: 'global', stock: prod?.stock_restant_du_jour ?? 0 });
+      // Pas d'institut → pas de vendeur ciblé
+      return res.json({ success: true, scope: 'global', stock: 0 });
     }
 
-    // Chercher un vendeur avec le même institut et parcours
+    // Trouver un vendeur pour l'institut (priorité même parcours)
     let vendor = null;
     if (parcours) {
-      const [[vendorWithParcours]] = await pool.query(
-        "SELECT id FROM utilisateurs WHERE role = 'vendeur' AND institut = ? AND parcours = ? LIMIT 1", 
-        [institut, parcours]
-      );
-      vendor = vendorWithParcours;
+      vendor = await usersCol.findOne({ role: 'vendeur', institut, parcours });
     }
-
-    // Si pas de vendeur avec le même parcours, chercher n'importe quel vendeur de l'institut
     if (!vendor) {
-      const [[vendorInInstitut]] = await pool.query(
-        "SELECT id FROM utilisateurs WHERE role = 'vendeur' AND institut = ? LIMIT 1", 
-        [institut]
-      );
-      vendor = vendorInInstitut;
+      vendor = await usersCol.findOne({ role: 'vendeur', institut });
     }
-
     if (!vendor) {
       return res.json({ success: true, scope: 'vendor', stock: 0, message: 'Aucun vendeur pour cet institut' });
     }
 
-    const [[alloc]] = await pool.query(
-      'SELECT stock_restant FROM allocations_vendeurs WHERE vendeur_id = ? AND date_jour = CURRENT_DATE()',
-      [vendor.id]
-    );
+    const dateStr = new Date().toISOString().split('T')[0];
+    const alloc = await allocCol.findOne({ vendeur_id: vendor._id, date_jour: dateStr });
     return res.json({ success: true, scope: 'vendor', stock: alloc?.stock_restant ?? 0 });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Erreur lecture stock', detail: String(err) });

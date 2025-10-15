@@ -18,12 +18,23 @@ const adminMiddleware = (req, res, next) => {
 // GET /api/users/vendors - Liste des vendeurs
 router.get('/users/vendors', authMiddleware, adminMiddleware, async (req, res) => {
   try {
-    const pool = getDbPool();
-    const [vendors] = await pool.query(
-      "SELECT id, nom, prenom, email, whatsapp, institut, parcours, created_at FROM utilisateurs WHERE role = 'vendeur' ORDER BY nom, prenom"
-    );
-    
-    return res.json({ success: true, vendors });
+    const usersCol = getCollection('utilisateurs');
+    const vendors = await usersCol
+      .find({ role: 'vendeur' })
+      .project({ hash_mot_de_passe: 0 })
+      .sort({ nom: 1, prenom: 1 })
+      .toArray();
+    const mapped = vendors.map(v => ({
+      id: v._id.toString(),
+      nom: v.nom,
+      prenom: v.prenom,
+      email: v.email,
+      whatsapp: v.whatsapp || null,
+      institut: v.institut,
+      parcours: v.parcours,
+      created_at: v.created_at || null
+    }));
+    return res.json({ success: true, vendors: mapped });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Erreur lors de la récupération des vendeurs', detail: String(err) });
   }
@@ -38,24 +49,26 @@ router.post('/users/vendor', authMiddleware, adminMiddleware, async (req, res) =
   }
 
   try {
-    const pool = getDbPool();
+    const usersCol = getCollection('utilisateurs');
+    const existing = await usersCol.findOne({ email });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Cette adresse email est déjà utilisée' });
+    }
     const hash = await bcrypt.hash(password, 10);
-    
-    await pool.query(
-      'INSERT INTO utilisateurs (nom, prenom, email, whatsapp, institut, parcours, hash_mot_de_passe, role) VALUES (?, ?, ?, ?, ?, ?, ?, "vendeur")',
-      [nom, prenom, email, whatsapp || null, institut, parcours, hash]
-    );
-    
+    await usersCol.insertOne({
+      nom,
+      prenom,
+      email,
+      whatsapp: whatsapp || null,
+      institut,
+      parcours,
+      hash_mot_de_passe: hash,
+      role: 'vendeur',
+      created_at: new Date(),
+      updated_at: new Date()
+    });
     return res.json({ success: true, message: 'Vendeur créé avec succès' });
   } catch (err) {
-    const errorMessage = String(err?.message || '');
-    if (errorMessage.includes('Duplicate entry')) {
-      if (errorMessage.includes('email')) {
-        return res.status(409).json({ success: false, message: 'Cette adresse email est déjà utilisée' });
-      } else if (errorMessage.includes('whatsapp')) {
-        return res.status(409).json({ success: false, message: 'Ce numéro de téléphone est déjà utilisé' });
-      }
-    }
     return res.status(500).json({ success: false, message: 'Erreur lors de la création du vendeur', detail: String(err) });
   }
 });
@@ -70,39 +83,31 @@ router.put('/users/vendor/:id', authMiddleware, adminMiddleware, async (req, res
   }
 
   try {
-    const pool = getDbPool();
-    
-    // Vérifier que le vendeur existe
-    const [[vendor]] = await pool.query('SELECT id FROM utilisateurs WHERE id = ? AND role = "vendeur"', [id]);
+    const usersCol = getCollection('utilisateurs');
+    const _id = new ObjectId(id);
+    const vendor = await usersCol.findOne({ _id, role: 'vendeur' });
     if (!vendor) {
       return res.status(404).json({ success: false, message: 'Vendeur non trouvé' });
     }
 
-    let updateQuery = 'UPDATE utilisateurs SET nom = ?, prenom = ?, email = ?, whatsapp = ?, institut = ?, parcours = ?';
-    let updateParams = [nom, prenom, email, whatsapp || null, institut, parcours];
-
-    // Inclure le mot de passe seulement s'il est fourni
+    const update = {
+      $set: {
+        nom,
+        prenom,
+        email,
+        whatsapp: whatsapp || null,
+        institut,
+        parcours,
+        updated_at: new Date()
+      }
+    };
     if (password) {
       const hash = await bcrypt.hash(password, 10);
-      updateQuery += ', hash_mot_de_passe = ?';
-      updateParams.push(hash);
+      update.$set.hash_mot_de_passe = hash;
     }
-
-    updateQuery += ' WHERE id = ?';
-    updateParams.push(id);
-
-    await pool.query(updateQuery, updateParams);
-    
+    await usersCol.updateOne({ _id }, update);
     return res.json({ success: true, message: 'Vendeur modifié avec succès' });
   } catch (err) {
-    const errorMessage = String(err?.message || '');
-    if (errorMessage.includes('Duplicate entry')) {
-      if (errorMessage.includes('email')) {
-        return res.status(409).json({ success: false, message: 'Cette adresse email est déjà utilisée' });
-      } else if (errorMessage.includes('whatsapp')) {
-        return res.status(409).json({ success: false, message: 'Ce numéro de téléphone est déjà utilisé' });
-      }
-    }
     return res.status(500).json({ success: false, message: 'Erreur lors de la modification du vendeur', detail: String(err) });
   }
 });
@@ -110,40 +115,26 @@ router.put('/users/vendor/:id', authMiddleware, adminMiddleware, async (req, res
 // POST /api/admin/allocate - Allouer du stock à un vendeur
 router.post('/allocate', authMiddleware, adminMiddleware, async (req, res) => {
   const { vendeur_id, quantite } = req.body;
-  
   if (!vendeur_id || !quantite || quantite <= 0) {
     return res.status(400).json({ success: false, message: 'Vendeur et quantité valides requis' });
   }
-
   try {
-    const pool = getDbPool();
-    
-    // Vérifier que le vendeur existe
-    const [[vendor]] = await pool.query('SELECT id, nom, prenom FROM utilisateurs WHERE id = ? AND role = "vendeur"', [vendeur_id]);
+    const usersCol = getCollection('utilisateurs');
+    const allocCol = getCollection('allocations_vendeurs');
+    const _id = new ObjectId(String(vendeur_id));
+    const vendor = await usersCol.findOne({ _id, role: 'vendeur' });
     if (!vendor) {
       return res.status(404).json({ success: false, message: 'Vendeur non trouvé' });
     }
-
-    // Vérifier s'il y a déjà une allocation pour aujourd'hui
-    const [[existingAllocation]] = await pool.query(
-      'SELECT id, stock_restant FROM allocations_vendeurs WHERE vendeur_id = ? AND date_jour = CURRENT_DATE()',
-      [vendeur_id]
+    const dateStr = new Date().toISOString().split('T')[0];
+    await allocCol.updateOne(
+      { vendeur_id: _id, date_jour: dateStr },
+      {
+        $setOnInsert: { vendeur_id: _id, date_jour: dateStr },
+        $inc: { stock_alloue: Number(quantite), stock_restant: Number(quantite) }
+      },
+      { upsert: true }
     );
-
-    if (existingAllocation) {
-      // Mettre à jour l'allocation existante
-      await pool.query(
-        'UPDATE allocations_vendeurs SET stock_restant = stock_restant + ? WHERE id = ?',
-        [quantite, existingAllocation.id]
-      );
-    } else {
-      // Créer une nouvelle allocation
-      await pool.query(
-        'INSERT INTO allocations_vendeurs (vendeur_id, stock_restant, date_jour) VALUES (?, ?, CURRENT_DATE())',
-        [vendeur_id, quantite]
-      );
-    }
-    
     return res.json({ success: true, message: `${quantite} croissants alloués à ${vendor.nom} ${vendor.prenom}` });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Erreur lors de l\'allocation', detail: String(err) });

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { BoxSeam, Cart, People, CashCoin, Calendar3 } from "react-bootstrap-icons";
-import axios from "axios";
+import { api } from "../api";
 import AdminAllocations from "./AdminAllocations.jsx";
 import AdminUtilisateurs from "./AdminUtilisateurs.jsx";
 
@@ -29,15 +29,15 @@ function AdminDashboard({ admin, onLogout }) {
 
       setLoading(true);
       try {
-        const revenueResponse = await axios.get(`/api/admin/revenue/${selectedDate}`, {
+        const revenueResponse = await api.get(`/admin/revenue/${selectedDate}`, {
           headers: { Authorization: `Bearer ${admin.token}` },
         });
 
-        const productResponse = await axios.get(`/api/admin/product-stats/${selectedDate}`, {
+        const productResponse = await api.get(`/admin/product-stats/${selectedDate}`, {
           headers: { Authorization: `Bearer ${admin.token}` },
         });
 
-        const vendorsResponse = await axios.get(`/api/admin/vendors-stats/${selectedDate}`, {
+        const vendorsResponse = await api.get(`/admin/vendors-stats/${selectedDate}`, {
           headers: { Authorization: `Bearer ${admin.token}` },
         });
 

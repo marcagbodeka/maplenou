@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { CheckCircle, XCircle, Calendar3, BoxArrowRight } from "react-bootstrap-icons";
-import axios from "axios";
+import { api } from "../api";
 
 function VendeurInterface({ vendeur, onLogout }) {
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
@@ -16,7 +16,7 @@ function VendeurInterface({ vendeur, onLogout }) {
       
       try {
         setLoading(true);
-        const response = await axios.get(`/api/orders/vendor/${vendeur.id}`, {
+        const response = await api.get(`/orders/vendor/${vendeur.id}`, {
           headers: { Authorization: `Bearer ${vendeur.token}` }
         });
         
@@ -37,7 +37,7 @@ function VendeurInterface({ vendeur, onLogout }) {
   const handleAccepter = async (id) => {
     try {
       setLoading(true);
-      const response = await axios.put(`/api/orders/${id}/process`, { action: 'accept' }, {
+      const response = await api.put(`/orders/${id}/process`, { action: 'accept' }, {
         headers: { Authorization: `Bearer ${vendeur.token}` }
       });
 
@@ -59,7 +59,7 @@ function VendeurInterface({ vendeur, onLogout }) {
   const handleRefuser = async (id) => {
     try {
       setLoading(true);
-      const response = await axios.put(`/api/orders/${id}/process`, { action: 'reject' }, {
+      const response = await api.put(`/orders/${id}/process`, { action: 'reject' }, {
         headers: { Authorization: `Bearer ${vendeur.token}` }
       });
 

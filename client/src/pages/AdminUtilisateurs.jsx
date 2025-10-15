@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { People, ArrowLeft, Trophy, Star, Award } from "react-bootstrap-icons";
-import axios from 'axios';
+import { api } from '../api';
 
 function AdminUtilisateurs({ admin, onBack, onLogout }) {
   const [users, setUsers] = useState([]);
@@ -14,7 +14,7 @@ function AdminUtilisateurs({ admin, onBack, onLogout }) {
       
       setLoading(true);
       try {
-        const response = await axios.get('/api/admin/users-ranking', {
+        const response = await api.get('/admin/users-ranking', {
           headers: { Authorization: `Bearer ${admin.token}` }
         });
         

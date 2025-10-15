@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Cart, Clock, PersonCircle } from "react-bootstrap-icons";
-import axios from "axios";
+import { api } from "../api";
 
 export default function ProductDetailScreen({ user, onLogout }) {
   const [product, setProduct] = useState(null);
@@ -61,7 +61,7 @@ export default function ProductDetailScreen({ user, onLogout }) {
     const loadData = async () => {
       try {
         // Charger les informations du produit
-        const productResponse = await axios.get('/api/product');
+        const productResponse = await api.get('/product');
         if (productResponse.data.success) {
       setProduct({
             ...productResponse.data.data,
@@ -70,7 +70,7 @@ export default function ProductDetailScreen({ user, onLogout }) {
         }
 
         // Charger le stock restant pour l'utilisateur
-        const stockResponse = await axios.get('/api/orders/stock-remaining', {
+        const stockResponse = await api.get('/orders/stock-remaining', {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         
@@ -82,7 +82,7 @@ export default function ProductDetailScreen({ user, onLogout }) {
         }
 
         // Vérifier s'il y a une commande en attente
-        const pendingResponse = await axios.get('/api/orders/pending', {
+        const pendingResponse = await api.get('/orders/pending', {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         
@@ -99,7 +99,7 @@ export default function ProductDetailScreen({ user, onLogout }) {
 
         // Récupérer les données utilisateur mises à jour depuis l'API
         try {
-          const userResponse = await axios.get('/api/auth/me', {
+          const userResponse = await api.get('/auth/me', {
             headers: { Authorization: `Bearer ${user.token}` }
           });
           
@@ -147,7 +147,7 @@ export default function ProductDetailScreen({ user, onLogout }) {
 
     const checkOrderStatus = async () => {
       try {
-        const pendingResponse = await axios.get('/api/orders/pending', {
+        const pendingResponse = await api.get('/orders/pending', {
           headers: { Authorization: `Bearer ${user.token}` }
         });
         
@@ -158,7 +158,7 @@ export default function ProductDetailScreen({ user, onLogout }) {
           setOrderSuccess(false);
           
           // Recharger les données utilisateur pour mettre à jour le streak
-          const userResponse = await axios.get('/api/auth/me', {
+          const userResponse = await api.get('/auth/me', {
             headers: { Authorization: `Bearer ${user.token}` }
           });
           
@@ -182,7 +182,7 @@ export default function ProductDetailScreen({ user, onLogout }) {
           }
           
           // Recharger le stock
-          const stockResponse = await axios.get('/api/orders/stock-remaining', {
+          const stockResponse = await api.get('/orders/stock-remaining', {
             headers: { Authorization: `Bearer ${user.token}` }
           });
           if (stockResponse.data.success) {
@@ -228,7 +228,7 @@ export default function ProductDetailScreen({ user, onLogout }) {
       
       // Créer la commande via l'API
       console.log('Envoi de la requête API...');
-      const response = await axios.post('/api/orders', {}, {
+      const response = await api.post('/orders', {}, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
 
@@ -244,7 +244,7 @@ export default function ProductDetailScreen({ user, onLogout }) {
         // Recharger les données pour s'assurer de la cohérence
         setTimeout(async () => {
           try {
-            const stockResponse = await axios.get('/api/orders/stock-remaining', {
+            const stockResponse = await api.get('/orders/stock-remaining', {
               headers: { Authorization: `Bearer ${user.token}` }
             });
             if (stockResponse.data.success) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { People, PlusCircle, PencilSquare } from "react-bootstrap-icons";
-import axios from "axios";
+import { api } from "../api";
 
 const parcoursOptions = ["Licence 1", "Licence 2", "Licence 3", "Master 1", "Master 2", "Doctorat"];
 const institutsOptions = ["ISSJ", "ISEG", "ESI/DGI", "HEC", "IAEC"];
@@ -29,7 +29,7 @@ function Allocations({ admin, onBack, onLogout }) {
     const loadVendeurs = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('/api/admin/users/vendors', {
+        const response = await api.get('/admin/users/vendors', {
           headers: { Authorization: `Bearer ${admin.token}` }
         });
         if (response.data.success) {
@@ -54,7 +54,7 @@ function Allocations({ admin, onBack, onLogout }) {
     try {
       setLoading(true);
       console.log('Creating vendor with data:', newVendeur);
-      const response = await axios.post('/api/admin/users/vendor', {
+      const response = await api.post('/admin/users/vendor', {
         ...newVendeur,
         role: 'vendeur'
       }, {
@@ -65,7 +65,7 @@ function Allocations({ admin, onBack, onLogout }) {
         setMessage(`✅ Nouveau vendeur "${newVendeur.nom} ${newVendeur.prenom}" ajouté !`);
         setNewVendeur({ nom: "", prenom: "", email: "", whatsapp: "", institut: "", parcours: "", password: "" });
         // Recharger la liste
-        const vendorsResponse = await axios.get('/api/admin/users/vendors', {
+        const vendorsResponse = await api.get('/admin/users/vendors', {
           headers: { Authorization: `Bearer ${admin.token}` }
         });
         if (vendorsResponse.data.success) {
@@ -112,7 +112,7 @@ function Allocations({ admin, onBack, onLogout }) {
         updateData.password = newVendeur.password;
       }
 
-      const response = await axios.put(`/api/admin/users/vendor/${editingVendeur.id}`, updateData, {
+      const response = await api.put(`/admin/users/vendor/${editingVendeur.id}`, updateData, {
         headers: { Authorization: `Bearer ${admin.token}` }
       });
 
@@ -120,7 +120,7 @@ function Allocations({ admin, onBack, onLogout }) {
         setMessage(`✅ Vendeur "${newVendeur.nom} ${newVendeur.prenom}" modifié !`);
         setEditingVendeur(null);
         setNewVendeur({ nom: "", prenom: "", email: "", whatsapp: "", institut: "", parcours: "", password: "" });
-        const vendorsResponse = await axios.get('/api/admin/users/vendors', {
+        const vendorsResponse = await api.get('/admin/users/vendors', {
           headers: { Authorization: `Bearer ${admin.token}` }
         });
         if (vendorsResponse.data.success) {
@@ -148,7 +148,7 @@ function Allocations({ admin, onBack, onLogout }) {
 
     try {
       setLoading(true);
-      const response = await axios.post('/api/admin/allocate', {
+      const response = await api.post('/admin/allocate', {
         vendeur_id: parseInt(selectedVendeur),
         quantite: parseInt(quantite)
       }, {

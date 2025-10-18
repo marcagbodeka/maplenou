@@ -7,3 +7,4 @@ ON DUPLICATE KEY UPDATE jours_consecutifs_requis=VALUES(jours_consecutifs_requis
 
 
 
+

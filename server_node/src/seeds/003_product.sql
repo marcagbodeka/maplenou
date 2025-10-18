@@ -7,3 +7,4 @@ ON DUPLICATE KEY UPDATE nom=VALUES(nom), prix=VALUES(prix);
 
 
 
+

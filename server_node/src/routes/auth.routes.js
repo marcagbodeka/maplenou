@@ -8,6 +8,82 @@ const { authMiddleware } = require('../middlewares/auth');
 
 const router = express.Router();
 
+// Fonction pour vérifier et réinitialiser le streak d'un client
+async function checkAndResetStreak(user) {
+  try {
+    const usersCol = getCollection('utilisateurs');
+    const commandes = getCollection('commandes');
+    const allocations = getCollection('allocations_vendeurs');
+    
+    // Calculer hier
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    
+    // Normaliser institut/parcours du client
+    let institut = user.institut || null;
+    let parcours = user.parcours || null;
+    const knownParcours = new Set(['Licence 1', 'Licence 2', 'Licence 3', 'Master 1', 'Master 2', 'Doctorat']);
+    const knownInstituts = new Set(['ISSJ', 'ISEG', 'ESI/DGI', 'HEC', 'IAEC']);
+    
+    if (!parcours && knownParcours.has(String(institut))) {
+      parcours = institut;
+      institut = null;
+    }
+    if (!institut && knownInstituts.has(String(parcours))) {
+      institut = parcours;
+      parcours = null;
+    }
+    
+    if (!institut) return; // Pas de vendeur cible → conserver la progression
+    
+    // Trouver le vendeur correspondant
+    let vendeur = null;
+    if (parcours) {
+      vendeur = await usersCol.findOne({ role: 'vendeur', institut, parcours });
+    }
+    if (!vendeur) {
+      vendeur = await usersCol.findOne({ role: 'vendeur', institut });
+    }
+    if (!vendeur) return; // Pas de vendeur → conserver la progression
+    
+    // Vérifier si le vendeur a reçu une allocation hier
+    const hadAllocation = await allocations.findOne({
+      vendeur_id: vendeur._id,
+      date_jour: yesterdayStr
+    });
+    
+    if (!hadAllocation) return; // Pas d'allocation hier → conserver la progression
+    
+    // Vérifier si le client a commandé hier
+    const hadOrder = await commandes.findOne({
+      utilisateur_id: user._id,
+      statut: 'traitee',
+      date_commande: { $gte: yesterday, $lt: today }
+    });
+    
+    if (hadOrder) return; // A commandé hier → conserver la progression
+    
+    // Reset de la progression
+    await usersCol.updateOne(
+      { _id: user._id },
+      { 
+        $set: { 
+          streak_consecutif: 0, 
+          badge_niveau: 0, 
+          eligible_loterie: false,
+          updated_at: new Date()
+        } 
+      }
+    );
+    
+    console.log(`Streak reset for client ${user.nom} ${user.prenom} - no order yesterday despite vendor allocation`);
+  } catch (err) {
+    console.error('Error checking streak reset:', err);
+  }
+}
+
 router.post('/register', async (req, res) => {
   const { nom, prenom, email, password, whatsapp, telephone, institut, parcours } = req.body || {};
   if (!nom || !prenom || !email || !password) {
@@ -88,6 +164,11 @@ router.post('/login', async (req, res) => {
     }
     if (!isPasswordValid) {
       return res.status(401).json({ success: false, message: 'Identifiants invalides' });
+    }
+
+    // Vérification et reset de streak pour les clients
+    if (user.role === 'client' && user.streak_consecutif > 0) {
+      await checkAndResetStreak(user);
     }
 
     const id = (user._id && user._id.toString()) || String(user.id);

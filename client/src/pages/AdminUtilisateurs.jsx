@@ -83,8 +83,17 @@ function AdminUtilisateurs({ admin, onBack, onLogout }) {
             Classement par nombre de commandes consécutives
           </div>
 
-          {/* Liste des utilisateurs */}
-          <div className="d-grid gap-3">
+          {/* Liste des utilisateurs avec scroll */}
+          <div 
+            className="d-grid gap-3"
+            style={{
+              maxHeight: "60vh",
+              overflowY: "auto",
+              overflowX: "hidden",
+              WebkitOverflowScrolling: "touch",
+              overscrollBehaviorY: "contain"
+            }}
+          >
             {loading ? (
               <div className="text-center py-4">
                 <div className="spinner-border text-primary" role="status">

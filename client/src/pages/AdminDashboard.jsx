@@ -189,12 +189,21 @@ function AdminDashboard({ admin, onLogout }) {
           </div>
         </div>
 
-        {/* 🔸 Liste des vendeurs */}
+        {/* 🔸 Liste des vendeurs avec scroll */}
         <div className="bg-white rounded-4 shadow-sm p-4 mb-3">
           <h6 className="fw-bold mb-3" style={{ color: "#1e293b" }}>
             🧾 Liste des Vendeurs
           </h6>
-          <div className="d-grid gap-2">
+          <div 
+            className="d-grid gap-2"
+            style={{
+              maxHeight: "40vh",
+              overflowY: "auto",
+              overflowX: "hidden",
+              WebkitOverflowScrolling: "touch",
+              overscrollBehaviorY: "contain"
+            }}
+          >
             {loading ? (
               <div className="text-center py-3">
                 <div className="spinner-border text-primary" role="status">
